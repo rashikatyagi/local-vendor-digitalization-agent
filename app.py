@@ -1,4 +1,4 @@
-# app.py - Final English-Only Version
+# app.py - Final English-Only Version with Improved Retrieval
 
 import streamlit as st
 import os
@@ -28,7 +28,6 @@ def initialize_components():
     """
     Initializes and returns the core components: LLM and the document retriever.
     """
-    # 1. Initialize the LLM with fine-tuned parameters
     llm = WatsonxLLM(
         model_id="ibm/granite-13b-instruct-v2",
         url=WATSONX_URL,
@@ -42,12 +41,9 @@ def initialize_components():
         }
     )
 
-    # 2. Initialize embeddings model (English-only is fine now)
     embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
 
-    # 3. Initialize Pinecone vector store and retriever
     try:
-        # Load documents from the main knowledge_base folder
         loader = PyPDFDirectoryLoader("knowledge_base/")
         documents = loader.load()
         if not documents:
@@ -58,11 +54,13 @@ def initialize_components():
         docs = text_splitter.split_documents(documents)
         
         pc = Pinecone(api_key=PINECONE_API_KEY)
-        index = pc.Index(PINECONE_INDEX_NAME) # Using the single, main index
+        index = pc.Index(PINECONE_INDEX_NAME)
         vectorstore = PineconeVectorStore(index, embeddings, "text")
         vectorstore.add_documents(docs)
         
-        retriever = vectorstore.as_retriever()
+        # This is the updated line to retrieve more documents
+        retriever = vectorstore.as_retriever(search_type="similarity", search_kwargs={"k": 4})
+
     except Exception as e:
         st.error(f"Failed to build knowledge base: {e}")
         return None, None
@@ -86,7 +84,6 @@ if llm and retriever:
             retrieved_docs = retriever.get_relevant_documents(user_question)
             context = "\n\n".join([doc.page_content for doc in retrieved_docs])
             
-            # Final, robust prompt for English
             prompt_template = """
             You are a helpful AI assistant for street vendors in India called the "Street Vendor Digitalization Agent."
             Your goal is to provide a complete, actionable plan based on the user's statement and the provided Context.
