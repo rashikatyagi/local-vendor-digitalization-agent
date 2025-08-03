@@ -25,15 +25,24 @@ PINECONE_INDEX_NAME = os.getenv("PINECONE_INDEX_NAME")
 # --- CORE RAG FUNCTIONS ---
 
 @st.cache_resource
+@st.cache_resource
 def initialize_rag_pipeline():
     """
     Initializes and returns the core components: the LLM and the Vector Store.
     """
+    # --- DEBUGGING -- Add these lines ---
+    print("--- Initializing WatsonxLLM with the following credentials ---")
+    print(f"URL: {os.getenv('WATSONX_API_URL', 'Not Found')}") # Use a default value for printing
+    print(f"API Key is present: {bool(os.getenv('WATSONX_API_KEY'))}")
+    print(f"Project ID: {os.getenv('WATSONX_PROJECT_ID')}")
+    # --- END DEBUGGING ---
+
     # 1. Initialize the LLM
     llm = WatsonxLLM(
         model_id="ibm/granite-3-8b-instruct",
-        url="https://au-syd.ml.cloud.ibm.com", 
-        apikey=WATSONX_API_KEY,
+        url=os.getenv("WATSONX_API_URL"), # Make sure this key exists in your secrets
+        project_id=os.getenv("WATSONX_PROJECT_ID"),
+        apikey=os.getenv("WATSONX_API_KEY"),
         params={"max_new_tokens": 1024}
     )
 
