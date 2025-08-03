@@ -12,6 +12,7 @@ from langchain_pinecone import PineconeVectorStore
 from langchain.chains import RetrievalQA
 from langchain.prompts import PromptTemplate
 from pinecone import Pinecone
+from langdetect import detect
 
 # # --- LOAD CREDENTIALS ---
 # # Load credentials from .env file for local development
@@ -35,14 +36,6 @@ WATSONX_PROJECT_ID = os.getenv("WATSONX_PROJECT_ID")
 PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
 PINECONE_INDEX_NAME = os.getenv("PINECONE_INDEX_NAME")
 
-# --- DEBUGGING -- Add these lines ---
-print(f"WATSONX_API_KEY: {WATSONX_API_KEY}")
-print(f"WATSONX_PROJECT_ID: {WATSONX_PROJECT_ID}")
-print(f"PINECONE_API_KEY: {PINECONE_API_KEY}")
-print(f"PINECONE_INDEX_NAME: {PINECONE_INDEX_NAME}")
-# --- END DEBUGGING ---
-
-
 
 # --- CORE RAG FUNCTIONS ---
 
@@ -63,7 +56,7 @@ def initialize_rag_pipeline():
     docs = text_splitter.split_documents(documents)
 
     # 3. Initialize embeddings
-    embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
+    embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2")
 
     # 4. Initialize Pinecone and create the vector store
     pc = Pinecone(api_key=PINECONE_API_KEY)
@@ -119,23 +112,36 @@ try:
     st.success("AI assistant is ready.")
 
     # Get user input
-    user_question = st.text_input("Ask your question here:", placeholder="e.g., How do I register my business?")
+    user_question = st.text_input("Ask your question here in any language:", placeholder="e.g., How do I register my business?")
 
     if user_question:
         with st.spinner("Generating answer..."):
-            # Invoke the chain with the user's question
+            # 1. Detect the language of the user's question
+            detected_language = detect(user_question)
+            
+            # 2. Create a dynamic prompt based on the language
+            # (For a real app, you would use a proper translation service for the prompt itself)
+            prompt_template = f"""
+            Use the provided context to answer the user's question accurately and concisely.
+            Your response must be in the following language: {detected_language}.
+            If the context does not contain the answer, state that the information is not available in that language.
+
+            Context: {{context}}
+            Question: {{question}}
+            Answer:
+            """
+            
+            QA_PROMPT = PromptTemplate(template=prompt_template, input_variables=["context", "question"])
+            
+            # 3. Update the chain with the new prompt
+            chain.combine_documents_chain.llm_chain.prompt = QA_PROMPT
+
+            # 4. Invoke the chain
             result = chain.invoke({"query": user_question})
 
             # Display the answer
             st.subheader("Answer:")
             st.write(result["result"])
-
-            # Display the sources
-            with st.expander("Show Sources"):
-                st.write("The answer was generated based on the following documents:")
-                for doc in result["source_documents"]:
-                    st.write(f"- {doc.metadata.get('source', 'Unknown source')}")
-
 except Exception as e:
     st.error(f"An error occurred: {e}")
     st.error("There was a problem initializing the AI assistant. Please check the configurations.")
