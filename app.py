@@ -115,33 +115,42 @@ try:
     user_question = st.text_input("Ask your question here in any language:", placeholder="e.g., How do I register my business?")
 
     if user_question:
-        with st.spinner("Generating answer..."):
-            # 1. Detect the language of the user's question
-            detected_language = detect(user_question)
-            
-            # 2. Create a dynamic prompt based on the language
-            # (For a real app, you would use a proper translation service for the prompt itself)
-            prompt_template = f"""
-            Use the provided context to answer the user's question accurately and concisely.
-            Your response must be in the following language: {detected_language}.
-            If the context does not contain the answer, state that the information is not available in that language.
+    with st.spinner("Generating answer..."):
+        # 1. Detect the language
+        detected_language = detect(user_question)
+        print(f"Detected language: {detected_language}") # Good for debugging
 
-            Context: {{context}}
-            Question: {{question}}
-            Answer:
-            """
-            
-            QA_PROMPT = PromptTemplate(template=prompt_template, input_variables=["context", "question"])
-            
-            # 3. Update the chain with the new prompt
-            chain.combine_documents_chain.llm_chain.prompt = QA_PROMPT
+        # 2. Create a new, more robust prompt template
+        prompt_template = f"""
+        You are an assistant for local street vendors. Your primary goal is to answer the user's question based ONLY on the provided context.
+        Follow these rules strictly:
+        1. Formulate your final answer exclusively in the following language: **{detected_language}**.
+        2. Use only the information given in the 'Context' below. Do not use any other knowledge.
+        3. If the context does not contain the answer, reply only with 'इस सवाल का जवाब मेरे पास उपलब्ध नहीं है।' in that language.
+        4. Do not add any extra questions, conversations, or information beyond the direct answer.
 
-            # 4. Invoke the chain
-            result = chain.invoke({"query": user_question})
+        Context: {{context}}
+        Question: {{question}}
+        Answer:
+        """
+        
+        QA_PROMPT = PromptTemplate(template=prompt_template, input_variables=["context", "question"])
+        
+        # 3. Re-create the chain with the new, language-specific prompt
+        # This is more reliable than updating the prompt in an existing chain
+        qa_chain = RetrievalQA.from_chain_type(
+            llm, # The llm you initialized earlier
+            retriever=vectorstore.as_retriever(), # The vectorstore you initialized earlier
+            chain_type_kwargs={"prompt": QA_PROMPT},
+            return_source_documents=True
+        )
 
-            # Display the answer
-            st.subheader("Answer:")
-            st.write(result["result"])
+        # 4. Invoke the newly created chain
+        result = qa_chain.invoke({"query": user_question})
+
+        # Display the answer
+        st.subheader("Answer:")
+        st.write(result["result"])
 except Exception as e:
     st.error(f"An error occurred: {e}")
     st.error("There was a problem initializing the AI assistant. Please check the configurations.")
