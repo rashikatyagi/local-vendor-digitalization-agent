@@ -2,7 +2,9 @@ streamlit
 langchain
 langchain-ibm
 langchain-community
-pinecone-client
+langchain-pinecone
+langchain-huggingface
+pinecone
 pypdf
 sentence-transformers
 python-dotenv
