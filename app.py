@@ -1,4 +1,4 @@
-# app.py - Final Working Version
+# app.py - Final Production Version
 
 import streamlit as st
 import os
@@ -16,7 +16,6 @@ from pinecone import Pinecone
 
 # --- LOAD CREDENTIALS ---
 load_dotenv()
-# Load all four credentials now
 WATSONX_API_KEY = st.secrets.get("WATSONX_API_KEY", os.getenv("WATSONX_API_KEY"))
 WATSONX_PROJECT_ID = st.secrets.get("WATSONX_PROJECT_ID", os.getenv("WATSONX_PROJECT_ID"))
 PINECONE_API_KEY = st.secrets.get("PINECONE_API_KEY", os.getenv("PINECONE_API_KEY"))
@@ -24,16 +23,26 @@ PINECONE_INDEX_NAME = st.secrets.get("PINECONE_INDEX_NAME", os.getenv("PINECONE_
 WATSONX_URL = st.secrets.get("WATSONX_URL", os.getenv("WATSONX_URL"))
 
 # --- CORE RAG FUNCTIONS ---
+
 @st.cache_resource
 def initialize_components():
-    # ...
-    # 1. Initialize the LLM
+    """
+    Initializes and returns the core components: LLM and the document retriever.
+    """
+    # 1. Initialize the LLM with fine-tuned parameters
     llm = WatsonxLLM(
         model_id="ibm/granite-13b-instruct-v2",
-        url=WATSONX_URL,  # <-- CHANGE THIS LINE
+        url=WATSONX_URL,
         project_id=WATSONX_PROJECT_ID,
         apikey=WATSONX_API_KEY,
-        params={"max_new_tokens": 1024}
+        params={
+            "decoding_method": "sample",
+            "max_new_tokens": 1024,
+            "temperature": 0.7,
+            "top_k": 50,
+            "top_p": 1,
+            "repetition_penalty": 1.2
+        }
     )
 
     # 2. Initialize embeddings model
@@ -57,7 +66,6 @@ st.set_page_config(page_title="Street Vendor Digitalization Agent", page_icon="ð
 st.title("Street Vendor Digitalization Agent ðŸ¤–")
 st.write("Welcome! Ask a specific question or describe your business for a digitalization plan.")
 
-# Initialize the pipeline components
 llm, retriever = initialize_components()
 
 if llm and retriever:
@@ -67,22 +75,21 @@ if llm and retriever:
 
     if user_question:
         with st.spinner("Thinking..."):
-            # Step 1: Manually retrieve relevant documents
             retrieved_docs = retriever.get_relevant_documents(user_question)
             context = "\n\n".join([doc.page_content for doc in retrieved_docs])
-            
-            # Detect language for the response
             detected_language = detect(user_question)
             
-            # Step 2: Create a dynamic prompt and an LLMChain
+            # The final, most robust prompt
             prompt_template = f"""
-            You are the "Street Vendor Digitalization Agent." Your goal is to provide a complete, actionable plan for the user based on their statement and the provided Context.
-            
-            **Rules:**
-            1. Your final answer must be written exclusively in the following language: **{detected_language}**.
-            2. Use the information from the Context to create a detailed, structured response.
-            3. If the user asks a specific question, answer it directly. If they make a statement about their business, create a full digitalization plan with headings.
-            4. If the Context doesn't have the answer, state that the information is not available.
+            You are a helpful AI assistant for street vendors in India.
+
+            **FOLLOW THESE RULES VERY STRICTLY:**
+            1. You MUST reply ONLY in the language detected: **{detected_language}**.
+            2. Use the provided "Context" to create a detailed, structured response in markdown.
+            3. Do not repeat information. Provide diverse and actionable steps.
+            4. If the user makes a statement (e.g., "I sell mangoes in Ghaziabad"), create a full digitalization plan with headings.
+            5. If the user asks a specific question (e.g., "How do I get a UPI QR code?"), answer it directly.
+            6. If the Context does not have the answer, state that the information is not available in the detected language.
 
             **Context:**
             {context}
@@ -90,21 +97,19 @@ if llm and retriever:
             **User's Statement/Question:**
             "{user_question}"
 
-            **Your Detailed Answer:**
+            **Your Detailed Answer (in {detected_language}):**
             """
             
             prompt = PromptTemplate(template=prompt_template, input_variables=["context", "user_question"])
             chain = LLMChain(llm=llm, prompt=prompt)
 
-            # Step 3: Invoke the chain with the retrieved context
             result = chain.invoke({
                 "context": context,
                 "user_question": user_question
             })
 
-            # Display the answer and sources
             st.subheader("Your Digitalization Plan:")
-            st.markdown(result["text"]) # The output from LLMChain is in the "text" key
+            st.markdown(result["text"])
 
             with st.expander("Show Sources Used"):
                 for doc in retrieved_docs:
