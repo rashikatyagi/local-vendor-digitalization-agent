@@ -16,29 +16,21 @@ from pinecone import Pinecone
 
 # --- LOAD CREDENTIALS ---
 load_dotenv()
-# Use Streamlit secrets if deployed, otherwise use .env file
+# Load all four credentials now
 WATSONX_API_KEY = st.secrets.get("WATSONX_API_KEY", os.getenv("WATSONX_API_KEY"))
 WATSONX_PROJECT_ID = st.secrets.get("WATSONX_PROJECT_ID", os.getenv("WATSONX_PROJECT_ID"))
 PINECONE_API_KEY = st.secrets.get("PINECONE_API_KEY", os.getenv("PINECONE_API_KEY"))
 PINECONE_INDEX_NAME = st.secrets.get("PINECONE_INDEX_NAME", os.getenv("PINECONE_INDEX_NAME"))
+WATSONX_URL = st.secrets.get("WATSONX_URL", os.getenv("WATSONX_URL"))
 
 # --- CORE RAG FUNCTIONS ---
-
 @st.cache_resource
 def initialize_components():
-    """
-    Initializes and returns the core components: LLM and the document retriever.
-    This function is cached by Streamlit to avoid re-initializing on every interaction.
-    """
-    # --- DEBUGGING -- Add these lines ---
-    st.write("--- Checking Secrets ---")
-    st.write(f"Project ID is present: {bool(WATSONX_PROJECT_ID)}")
-    st.write(f"API Key is present: {bool(WATSONX_API_KEY)}")
-    # --- END DEBUGGING ---
+    # ...
     # 1. Initialize the LLM
     llm = WatsonxLLM(
-        model_id="meta-llama/llama-3-8b-instruct", # Using Llama 3 for better multilingual performance
-        url="https://au-syd.ml.cloud.ibm.com", # Ensure this matches your project region
+        model_id="meta-llama/llama-3-8b-instruct",
+        url=WATSONX_URL,  # <-- CHANGE THIS LINE
         project_id=WATSONX_PROJECT_ID,
         apikey=WATSONX_API_KEY,
         params={"max_new_tokens": 1024}
