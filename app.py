@@ -92,9 +92,13 @@ if llm and vectorstore:
             
             # A simpler, more direct prompt
             prompt_template = """
+            Use the provided context to give a direct and complete answer to the user's question.
+            The answer must be in the same language as the question.
+            Do not add any text, questions, or conversation after the answer is finished.
+
             Context: {context}
             Question: {question}
-            Answer in the same language as the question:
+            Answer:
             """
             
             QA_PROMPT = PromptTemplate(template=prompt_template, input_variables=["context", "question"])
