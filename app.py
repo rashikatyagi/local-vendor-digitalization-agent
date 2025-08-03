@@ -71,6 +71,8 @@ def initialize_rag_pipeline():
 
 # --- STREAMLIT USER INTERFACE ---
 
+# --- STREAMLIT USER INTERFACE ---
+
 st.set_page_config(page_title="Street Vendor Digitalization Agent", page_icon="🤖")
 st.title("Street Vendor Digitalization Agent 🤖")
 st.write(
@@ -78,7 +80,7 @@ st.write(
     "Ask your question in English or Hindi."
 )
 
-# Initialize the pipeline
+# Initialize the RAG pipeline components
 llm, vectorstore = initialize_rag_pipeline()
 
 if llm and vectorstore:
@@ -88,32 +90,39 @@ if llm and vectorstore:
 
     if user_question:
         with st.spinner("Generating answer..."):
+            # 1. Detect the language of the user's question
             detected_language = detect(user_question)
             
-            # A simpler, more direct prompt
-            prompt_template = """
-            Use the provided context to give a direct and complete answer to the user's question.
-            The answer must be in the same language as the question.
-            Do not add any text, questions, or conversation after the answer is finished.
+            # 2. Create the final, most robust prompt template
+            prompt_template = f"""
+            Follow these rules precisely to answer the user's question based on the provided Context.
+            1. Your final answer must be written exclusively in the following language: **{detected_language}**.
+            2. Use only the information from the Context. Do not use outside knowledge.
+            3. Answer only the user's question and then stop. Do not add any extra questions, conversation, or text.
+            4. If the answer is not in the Context, simply state that the information is not available in that language.
 
-            Context: {context}
-            Question: {question}
+            Context: {{context}}
+            Question: {{question}}
             Answer:
             """
             
             QA_PROMPT = PromptTemplate(template=prompt_template, input_variables=["context", "question"])
             
+            # 3. Get the retriever from your vector store
             retriever = vectorstore.as_retriever()
             
+            # 4. Create the full RAG chain with the dynamic prompt
             qa_chain = RetrievalQA.from_chain_type(
-                llm,
+                llm=llm,
                 retriever=retriever,
                 chain_type_kwargs={"prompt": QA_PROMPT},
                 return_source_documents=True
             )
             
+            # 5. Invoke the chain to get the result
             result = qa_chain.invoke({"query": user_question})
 
+            # Display the answer and sources
             st.subheader("Answer:")
             st.write(result["result"])
 
