@@ -90,17 +90,11 @@ if llm and vectorstore:
         with st.spinner("Generating answer..."):
             detected_language = detect(user_question)
             
-            prompt_template = f"""
-            You are an assistant for local street vendors. Your primary goal is to answer the user's question based ONLY on the provided context.
-            Follow these rules strictly:
-            1. Formulate your final answer exclusively in the following language: **{detected_language}**.
-            2. Use only the information given in the 'Context' below. Do not use any other knowledge.
-            3. If the context does not contain the answer, state that the information is not available in that language.
-            4. Do not add any extra questions, conversations, or information beyond the direct answer.
-
-            Context: {{context}}
-            Question: {{question}}
-            Answer:
+            # A simpler, more direct prompt
+            prompt_template = """
+            Context: {context}
+            Question: {question}
+            Answer in the same language as the question:
             """
             
             QA_PROMPT = PromptTemplate(template=prompt_template, input_variables=["context", "question"])
