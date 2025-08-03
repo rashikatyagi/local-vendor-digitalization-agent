@@ -29,7 +29,7 @@ def initialize_components():
     # ...
     # 1. Initialize the LLM
     llm = WatsonxLLM(
-        model_id="meta-llama/llama-3-8b-instruct",
+        model_id="ibm/granite-13b-instruct-v2",
         url=WATSONX_URL,  # <-- CHANGE THIS LINE
         project_id=WATSONX_PROJECT_ID,
         apikey=WATSONX_API_KEY,
