@@ -88,43 +88,63 @@ if llm and vectorstore:
 
     user_question = st.text_input("Ask your question here:", placeholder="e.g., How do I register my business?")
 
+    # In your main Streamlit UI section, after the user_question input...
+
     if user_question:
         with st.spinner("Generating answer..."):
-            # 1. Detect the language of the user's question
+            # Detect the language of the user's input
             detected_language = detect(user_question)
-            
-            # 2. Create the final, most robust prompt template
+
+            # --- NEW PERSONA-BASED PROMPT ---
+            # This prompt gives the AI a role and a structured plan to follow
             prompt_template = f"""
-            Follow these rules precisely to answer the user's question based on the provided Context.
-            1. Your final answer must be written exclusively in the following language: **{detected_language}**.
-            2. Use only the information from the Context. Do not use outside knowledge.
-            3. Answer only the user's question and then stop. Do not add any extra questions, conversation, or text.
-            4. If the answer is not in the Context, simply state that the information is not available in that language.
+            You are the "Street Vendor Digitalization Agent," a helpful AI assistant for street vendors in India. Your goal is to provide a complete, actionable plan to help them grow their business digitally.
+
+            **User's Business:** "{user_question}"
+            **Detected Language for Response:** {detected_language}
+
+            Based on the user's business description and the context provided below, generate a comprehensive business profile and action plan for them. Structure your response with the following sections, and answer in the detected language:
+
+            ### Business Profile Suggestion
+            - Create a catchy, one-line business name and description.
+
+            ### Digital Payments (UPI)
+            - Provide a step-by-step guide on how to get a UPI QR code.
+
+            ### Online Visibility (Local SEO)
+            - Give tips on how to list their business on Google Maps and other local platforms.
+
+            ### Customer Engagement
+            - Suggest simple tips for using WhatsApp or social media to connect with customers.
+            
+            ### Relevant Government Schemes
+            - Mention any relevant schemes from the context, like PM SVANidhi, and explain how they can help.
+
+            Use the following context to fill in the details for your plan. If some information is not in the context, provide general, helpful advice for that section.
 
             Context: {{context}}
-            Question: {{question}}
+            Question: How can the user describing their business as "{user_question}" be helped with digitalization?
             Answer:
             """
-            
+
             QA_PROMPT = PromptTemplate(template=prompt_template, input_variables=["context", "question"])
-            
-            # 3. Get the retriever from your vector store
+
             retriever = vectorstore.as_retriever()
-            
-            # 4. Create the full RAG chain with the dynamic prompt
+
             qa_chain = RetrievalQA.from_chain_type(
                 llm=llm,
                 retriever=retriever,
                 chain_type_kwargs={"prompt": QA_PROMPT},
-                return_source_documents=True
             )
-            
-            # 5. Invoke the chain to get the result
-            result = qa_chain.invoke({"query": user_question})
 
-            # Display the answer and sources
-            st.subheader("Answer:")
-            st.write(result["result"])
+            # We re-frame the user's statement as a question for the RAG chain
+            result = qa_chain.invoke({
+                "query": f"Create a digitalization plan for a user who says: '{user_question}'"
+            })
+            # --- END OF NEW LOGIC ---
+
+            st.subheader("Your Digitalization Plan:")
+            st.markdown(result["result"]) # Use st.markdown to render headings properly
 
             with st.expander("Show Sources"):
                 st.write("The answer was generated based on the following documents:")
