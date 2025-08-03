@@ -30,6 +30,11 @@ def initialize_components():
     Initializes and returns the core components: LLM and the document retriever.
     This function is cached by Streamlit to avoid re-initializing on every interaction.
     """
+    # --- DEBUGGING -- Add these lines ---
+    st.write("--- Checking Secrets ---")
+    st.write(f"Project ID is present: {bool(WATSONX_PROJECT_ID)}")
+    st.write(f"API Key is present: {bool(WATSONX_API_KEY)}")
+    # --- END DEBUGGING ---
     # 1. Initialize the LLM
     llm = WatsonxLLM(
         model_id="meta-llama/llama-3-8b-instruct", # Using Llama 3 for better multilingual performance
