@@ -6,7 +6,7 @@ An AI-powered conversational agent that generates **actionable digitalization pl
 
 ## 🔴 Live Demo
 
-👉 [Click here to access the live Streamlit app]([https://your-streamlit-url.com](https://local-vendor-digitalization-agent-wvibtnfdhg6kfy4wsmjrwd.streamlit.app/))  
+👉 [Click here to access the live Streamlit app][https://your-streamlit-url.com](https://local-vendor-digitalization-agent-wvibtnfdhg6kfy4wsmjrwd.streamlit.app] 
 
 ---
 
