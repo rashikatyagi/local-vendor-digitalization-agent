@@ -9,8 +9,22 @@ from langchain_community.document_loaders import PyPDFDirectoryLoader
 from langchain_ibm import WatsonxLLM
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_pinecone import PineconeVectorStore
-from langchain.chains import LLMChain
-from langchain.prompts import PromptTemplate
+# Robust import for LLMChain and PromptTemplate to support both pre-v1 and v1 split packages
+try:
+    # v1+ style (core abstractions moved to langchain_core)
+    from langchain_core.chains import LLMChain
+    from langchain_core.prompts import PromptTemplate
+except Exception:
+    try:
+        # older / intermediate layout
+        from langchain.chains import LLMChain
+        from langchain.prompts import PromptTemplate
+    except Exception as e:
+        raise ImportError(
+            "Could not import LLMChain/PromptTemplate. "
+            "Make sure you have 'langchain-core' and 'langchain' (or compatible versions) installed."
+        ) from e
+
 from pinecone import Pinecone
 
 # replace the old single import line with this block
