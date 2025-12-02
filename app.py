@@ -5,13 +5,29 @@ import os
 from dotenv import load_dotenv
 
 from langchain_community.document_loaders import PyPDFDirectoryLoader
-from langchain.text_splitter import RecursiveCharacterTextSplitter
+#from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_ibm import WatsonxLLM
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_pinecone import PineconeVectorStore
 from langchain.chains import LLMChain
 from langchain.prompts import PromptTemplate
 from pinecone import Pinecone
+
+# replace the old single import line with this block
+try:
+    # new packaged module
+    from langchain_text_splitters import RecursiveCharacterTextSplitter
+except Exception:
+    # fallback for older langchain versions (if available)
+    try:
+        from langchain.text_splitter import RecursiveCharacterTextSplitter
+    except Exception as e:
+        raise ImportError(
+            "Could not import RecursiveCharacterTextSplitter. "
+            "Make sure 'langchain-text-splitters' is installed or "
+            "that langchain version exposes langchain.text_splitter."
+        ) from e
+
 
 # --- LOAD CREDENTIALS ---
 load_dotenv()
